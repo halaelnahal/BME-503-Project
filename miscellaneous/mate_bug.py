@@ -1,0 +1,422 @@
+from brian2 import *
+import matplotlib.pyplot as plt
+
+
+# Map Size
+map_size = 100
+defaultclock.dt = 0.1*ms
+
+
+global bug_plot, sr_plot, sl_plot, bugx, bugy
+global mate_plot, mr_plot, ml_plot, matex, matey
+
+bugx = 0; bugy = 0;
+matex = 50; matey = 75;
+# Sensor neurons (Izhekevich Model)
+a = 0.02; b = 0.2; c = -65; d = 0.5
+
+# The virtual bug - may need to adjust these
+taum = 4*ms
+base_speed = 9.5
+turn_rate = 5*Hz
+
+# Synapse Parameters
+Cm=1.0*ufarad/cm**2
+area=20000*umetre**2
+I0 = 750
+g_synpk=0.12*nsiemens
+g_synmax=(g_synpk/(taum/ms*exp(-1)))
+
+
+v_nmda = 0
+v_t = 1
+tau_nmda= 100*ms
+g_nmda_max = 10*nsiemens
+alpha=0.072
+beta = 0.0066
+transwdth=1.0*ms
+
+
+
+# Differential Equations for bug and mate motors + sensors
+bug_eqs = '''
+dv/dt = (0.04*(v)*(v) + 5*(v) + 140 - u)/ms  :  1  #+ g_nmda*s*(v-v_nmda)/taum*mohm
+du/dt = a*(b*v - u)/ms : 1
+# ds/dt = (alpha*Trpre*(1-s)- beta*s)/second: 1
+# dg_nmda/dt = -g_nmda/tau_nmda: siemens
+
+motorl= g_mate_r/nS + 1/2*(1/v) : 1
+motorr= g_mate/nS + 1/2*(1/v) : 1
+speed = (motorl + motorr)/2 + base_speed : 1
+dangle/dt = (motorr - motorl)*turn_rate : 1
+dx/dt = speed*cos(angle)*15*Hz : 1
+dy/dt = speed*sin(angle)*15*Hz : 1
+
+dsa/dt = -sa/taum: siemens
+dsb/dt = -sb/taum: siemens
+
+dg_mate_r/dt=-g_mate_r/taum + sa/ms : siemens
+dg_mate/dt=-g_mate/taum + sb/ms : siemens
+
+
+#####################xxxxhixxxx##########################
+#
+# Trpre=.25*(tanh((t/ms-tspike/ms)/.005)-tanh((t/ms-(tspike/ms
+#             +transwdth/ms))/.005)):1
+# tspike:second
+'''
+
+sensor_eqs_bug = '''
+dv/dt = (0.04*(v)*(v) + 5*(v) + 140- u)/ms
+        + (I/mV)/(Cm*area):  1
+du/dt = a*(b*v - u)/ms : 1
+
+y : 1
+x : 1
+x_disp : 1
+y_disp : 1
+
+matex : 1
+matey : 1
+
+I = 5*I0*nA /sqrt((x-matex)**2+(y-matey)**2): amp
+'''
+
+mate_eqs = '''
+dv/dt = (0.04*(v)*(v) + 5*(v) + 140- u)/ms  :  1 #+ g_nmda*s*(v-v_nmda)/taum*mohm
+du/dt = a*(b*v - u)/ms : 1
+# ds/dt = (alpha*Trpre*(1-s)- beta*s)/second: 1
+# dg_nmda/dt = -g_nmda/tau_nmda: siemens
+
+motorl= g_bug_r/nS + 1/2*(1/v): 1
+motorr= g_bug/nS + 1/2*(1/v) : 1
+speed = (motorl + motorr)/2 + base_speed : 1
+dangle/dt = (motorr - motorl)*turn_rate : 1
+dx/dt = speed*cos(angle)*15*Hz : 1
+dy/dt = speed*sin(angle)*15*Hz : 1
+
+dsa/dt = -sa/taum: siemens
+dsb/dt = -sb/taum: siemens
+
+dg_bug_r/dt=-g_bug_r/taum + sa/ms : siemens
+dg_bug/dt=-g_bug/taum + sb/ms : siemens
+
+# Trpre=.25*(tanh((t/ms-tspike/ms)/.005)-tanh((t/ms-(tspike/ms
+#             +transwdth/ms))/.005)):1
+# tspike:second
+'''
+
+sensor_eqs_mate = '''
+dv/dt = (0.04*(v)*(v) + 5*(v) + 140- u)/ms
+        + (I/mV)/(Cm*area):  1
+du/dt = a*(b*v - u)/ms : 1
+
+y : 1
+x : 1
+x_disp : 1
+y_disp : 1
+
+bugx : 1
+bugy : 1
+
+I = 5*I0*nA /sqrt((x-bugx)**2+(y-bugy)**2): amp
+'''
+
+sensor_reset = '''
+v = c
+u = u + d
+'''
+
+
+# Initialize all neurons
+
+bug = NeuronGroup(1, bug_eqs,
+                    clock=Clock(0.2*ms),
+                    threshold='v >= 30',
+                    reset='v=0  ', #;tspike=t; g_nmda+=g_synmax
+                    refractory='0.5*ms',
+                    method="euler")
+
+bug.angle = pi/2
+bug.x = bugx
+bug.y = bugy
+bug.v = c
+bug.u = c*b
+#ug.tspike = -100*ms
+
+
+mate = NeuronGroup(1, mate_eqs,
+                    clock=Clock(0.2*ms),
+                    threshold='v >= 30',
+                    reset='v=0 ', #;tspike=t; g_nmda+=g_synmax
+                    refractory='0.5*ms',
+                    method="euler")
+mate.angle = pi/2
+mate.x = matex
+mate.y = matey
+mate.v = c
+mate.u = c*b
+#mate.tspike = -100*ms
+
+sr = NeuronGroup(1, sensor_eqs_bug, clock=Clock(0.2*ms),
+                    threshold = "v>=30", reset = sensor_reset, method = "euler")
+sr.v = c
+sr.u = c*b
+sr.x_disp = 5
+sr.y_disp = 5
+sr.x = sr.x_disp
+sr.y = sr.y_disp
+sr.matex = matex
+sr.matey = matey
+
+
+sl = NeuronGroup(1, sensor_eqs_bug, clock=Clock(0.2*ms),
+                threshold = "v>=30", reset = sensor_reset, method = "euler")
+sl.v = c
+sl.u = c*b
+sl.x_disp = -5
+sl.y_disp = 5
+sl.x = sl.x_disp
+sl.y = sl.y_disp
+sl.matex = matex
+sl.matey = matey
+
+mr = NeuronGroup(1, sensor_eqs_mate, clock=Clock(0.2*ms),
+                    threshold = "v>=30", reset = sensor_reset, method = "euler")
+mr.v = c
+mr.u = c*b
+mr.x_disp = 5
+mr.y_disp = 5
+mr.x = mr.x_disp
+mr.y = mr.y_disp
+mr.bugx = bugx
+mr.bugy = bugy
+
+ml = NeuronGroup(1, sensor_eqs_mate, clock=Clock(0.2*ms),
+                    threshold = "v>=30", reset = sensor_reset, method = "euler")
+ml.v = c
+ml.u = c*b
+ml.x_disp = -5
+ml.y_disp = 5
+ml.x = ml.x_disp
+ml.y = ml.y_disp
+ml.bugx = bugx
+ml.bugy = bugy
+
+ #Synapses (bug sensors communicate with bug motor)
+ #         (mate sensors communicate with mate motor)
+taupre = taupost = 20*ms
+wmax = 2*.8
+Apre = 0.01
+Apost = -Apre*taupre/taupost*1.05
+
+syn_r=Synapses(sr, bug, clock=sr.clock, model='''
+             w: siemens
+             dapre/dt = -apre/taupre : 1
+             dapost/dt = -apost/taupost : 1
+             ''',
+		on_pre='''
+		g_mate_r += w
+        apre += Apre
+        w = clip(w+apost*siemens, 0, wmax)
+		'''
+        , post='''
+        apost += Apost
+        w = clip(w+apre*siemens, 0, wmax) ''')
+
+syn_r.connect(i=[0],j=[0])
+syn_r.w=10*g_synmax/(defaultclock.dt/ms)
+
+syn_l=Synapses(sl, bug, clock=sl.clock, model='''
+             w: siemens
+             dapre/dt = -apre/taupre : 1
+             dapost/dt = -apost/taupost : 1
+             ''',
+		on_pre='''
+		g_mate += w
+        apre += Apre
+        w = clip(w+apost*siemens, 0, wmax)
+		'''
+        , post='''
+        apost += Apost
+        w = clip(w+apre*siemens, 0, wmax) ''')
+syn_l.connect(i=[0],j=[0])
+syn_l.w=10*g_synmax/(defaultclock.dt/ms)
+
+
+syn_mr = Synapses(mr, mate, clock=mr.clock, model='''
+             w: siemens
+             utk: siemens
+             dapre/dt = -apre/taupre : 1
+             dapost/dt = -apost/taupost : 1
+             ''',
+		on_pre='''
+		g_bug += w
+        g_bug_r += utk
+        apre += Apre
+        w = clip(w+apost*siemens, 0, wmax)
+		'''
+        , post='''
+        apost += Apost
+        w = clip(w+apre*siemens, 0, wmax) ''')
+syn_mr.connect(i=[0],j=[0])
+syn_mr.w=7*g_synmax/(defaultclock.dt/ms) #scenario 3
+#scenario 1: syn_mr.w=10*g_synmax/(defaultclock.dt/ms)
+ #scenario 2: syn_mr.w=7*g_synmax/(defaultclock.dt/ms)
+syn_mr.utk = 0;
+
+syn_ml = Synapses(ml, mate, clock=ml.clock, model='''
+             w: siemens
+             utk: siemens
+             dapre/dt = -apre/taupre : 1
+             dapost/dt = -apost/taupost : 1
+             ''',
+		on_pre='''
+		g_bug_r += w
+        g_bug += utk
+        apre += Apre
+        w = clip(w+apost*siemens, 0, wmax)
+		'''
+        , post='''
+        apost += Apost
+        w = clip(w+apre*siemens, 0, wmax) ''')
+syn_ml.connect(i=[0],j=[0])
+syn_ml.w=7*g_synmax/(defaultclock.dt/ms)  #scenario 3
+#scenario 1: syn_ml.w=10*g_synmax/(defaultclock.dt/ms)
+ #scenario 2: syn_ml.w=7*g_synmax/(defaultclock.dt/ms)
+syn_ml.utk = 0;
+
+f = figure(1)
+bug_plot = plot(bug.x, bug.y, 'bo')
+mate_plot = plot(mate.x, mate.y, 'ko')
+sr_plot = plot([0], [0], 'w')
+sl_plot = plot([0], [0], 'w')
+mr_plot = plot([0], [0], 'w')
+ml_plot = plot([0], [0], 'w')
+
+# This block of code updates the position of the bug and
+# mate and makes the appropriate rotations
+@network_operation()
+def update_positions():
+     global bug_plot, sr_plot, sl_plot, bugx, bugy
+     global mate_plot, mr_plot, ml_plot, matex, matey
+
+     sr.x = bug.x + sr.x_disp*cos(bug.angle-pi/2) - sr.y_disp*sin(bug.angle-pi/2)
+     sr.y = bug.y + sr.x_disp*sin(bug.angle-pi/2) + sr.y_disp*cos(bug.angle-pi/2)
+
+     sl.x = bug.x + sl.x_disp*cos(bug.angle-pi/2) - sl.y_disp*sin(bug.angle-pi/2)
+     sl.y = bug.y + sl.x_disp*sin(bug.angle-pi/2) + sl.y_disp*cos(bug.angle-pi/2)
+
+     mr.x = mate.x + mr.x_disp*cos(mate.angle-pi/2) - mr.y_disp*sin(mate.angle-pi/2)
+     mr.y = mate.y + mr.x_disp*sin(mate.angle-pi/2) + mr.y_disp*cos(mate.angle-pi/2)
+
+     ml.x = mate.x + ml.x_disp*cos(mate.angle-pi/2) - ml.y_disp*sin(mate.angle-pi/2)
+     ml.y = mate.y + ml.x_disp*sin(mate.angle-pi/2) + ml.y_disp*cos(mate.angle-pi/2)
+
+# PART 1
+     distance = ((bug.x-mate.x)**2+(bug.y-mate.y)**2)
+     if distance < 10:
+     	mate.x = randint(-map_size+10, map_size-10)
+     	mate.y = randint(-map_size+10, map_size-10)
+
+# PART 2
+    #  if ((bug.x-mate.x)**2+(bug.y-mate.y)**2) < 50:
+    #      syn_mr.w=30*g_synmax/(defaultclock.dt/ms)
+    #      syn_ml.w=30*g_synmax/(defaultclock.dt/ms)
+    #  else:
+    #      syn_mr.w=7*g_synmax/(defaultclock.dt/ms)
+    #      syn_ml.w=7*g_synmax/(defaultclock.dt/ms)
+
+
+# PART 3
+     if((bug.x-mate.x)**2+(bug.y-mate.y)**2) < 70:
+         syn_mr.w = 0
+         syn_ml.w = 0
+         syn_mr.utk=10*g_synmax/(defaultclock.dt/ms)
+         syn_ml.utk=10*g_synmax/(defaultclock.dt/ms)
+
+     # Rebound upon encountering the edge
+     if (bug.x < -map_size):
+         bug.x = -map_size
+         bug.angle = pi - bug.angle
+     if (bug.x > map_size):
+     	bug.x = map_size
+     	bug.angle = pi - bug.angle
+     if (bug.y < -map_size):
+     	bug.y = -map_size
+     	bug.angle = -bug.angle
+     if (bug.y > map_size):
+     	bug.y = map_size
+     	bug.angle = -bug.angle
+
+     # Rebound upon encountering the edge
+     if (mate.x < -map_size):
+         mate.x = -map_size
+         mate.angle = pi - mate.angle
+     if (mate.x > map_size):
+     	mate.x = map_size
+     	mate.angle = pi - mate.angle
+     if (mate.y < -map_size):
+     	mate.y = -map_size
+     	mate.angle = -bug.angle
+     if (mate.y > map_size):
+     	mate.y = map_size
+     	mate.angle = -mate.angle
+
+     sr.matex = mate.x
+     sr.matey = mate.y
+     sl.matex = mate.x
+     sl.matey = mate.y
+
+     mr.bugx = bug.x
+     mr.bugy = bug.y
+     ml.bugx = bug.x
+     ml.bugy = bug.y
+
+
+# this block of code updates the plots so
+# you can see the bug and mate move
+@network_operation(dt=2*ms)
+def update_plot():
+    global bug_plot, sr_plot, sl_plot
+    global mate_plot, mr_plot, ml_plot
+    bug_plot[0].remove()
+    mate_plot[0].remove()
+    sr_plot[0].remove()
+    sl_plot[0].remove()
+    mr_plot[0].remove()
+    ml_plot[0].remove()
+
+    bug_x_coords = [bug.x, bug.x-2*cos(bug.angle), bug.x-4*cos(bug.angle)]
+                    # ant-like body
+    bug_y_coords = [bug.y, bug.y-2*sin(bug.angle), bug.y-4*sin(bug.angle)]
+    # Plot the bug's current position
+    bug_plot = plot(bug_x_coords, bug_y_coords, 'bo')
+    sr_plot = plot([bug.x, sr.x], [bug.y, sr.y], 'b')
+    sl_plot = plot([bug.x, sl.x], [bug.y, sl.y], 'r')
+
+    mate_x_coords = [mate.x, mate.x-2*cos(mate.angle), mate.x-4*cos(mate.angle)]
+                    # ant-like body
+    mate_y_coords = [mate.y, mate.y-2*sin(mate.angle), mate.y-4*sin(mate.angle)]
+    # Plot the mate's current position
+    mate_plot = plot(mate_x_coords, mate_y_coords, 'ko')
+    mr_plot = plot([mate.x, mr.x], [mate.y, mr.y], 'b')
+    ml_plot = plot([mate.x, ml.x], [mate.y, ml.y], 'r')
+
+    axis([-100,100,-100,100])
+    draw()
+    title("Scenario 3")
+    #print "."
+    pause(0.001)
+
+run(1000*ms,report='text')
+
+
+# figure(2)
+
+# M = StateMonitor(bug,('v','g_nmda'),record=True)
+# M2 = StateMonitor(mate,('v','g_nmda'),record=True)
+# M3=StateMonitor(syn_r,('apre','apost'),record=True)
+# plot(M.t/ms, M.v[0])
+
+show()
