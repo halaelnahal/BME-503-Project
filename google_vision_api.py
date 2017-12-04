@@ -7,7 +7,7 @@ def requestLabel(fileName):
     from google.cloud.vision import types
 
     # Provide Google credential in script instead of one-time setup in environment
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/shishen/Desktop/BME503-cd8d324b4f4b.json"
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "BME503-cd8d324b4f4b.json"
 
     # Instantiates a client
     client = vision.ImageAnnotatorClient()
