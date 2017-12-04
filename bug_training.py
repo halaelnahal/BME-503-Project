@@ -19,13 +19,13 @@ bug_memory['orange'] = [0.49, 0.51, 10, -1, 1]
 
 from google_vision_api import requestLabel
 
-fileName = '/Users/shishen/Desktop/spider1.jpeg'
+fileName = 'Images/7.jpg'
 [label, score] = requestLabel(fileName)
-print('requested',label)
+print(label)
 print(score)
 
 def getValue(key):
     return bug_memory[key]
-    
+
 def adjustValue(key,value):
     bug_memory[key] = value
