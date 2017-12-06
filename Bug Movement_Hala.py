@@ -1,14 +1,16 @@
 from brian2 import *
 import matplotlib.pyplot as plt
 from random import randint
+import main
+from google_vision_api import requestLabel
+
 
 map_size = 100
-global foodx, foody, food_count, bug_plot, food_plot, sr_plot, sl_plot, food_color
+global imagex, imagey, image_count, bug_plot, image_plot, sr_plot, sl_plot
 duration = 5000 * ms
-foodx = 50
-foody = 50
-food_count = 0
-food_color = 'g*'
+imagex = 50
+imagey = 50
+image_count = 0
 
 # Sensor neurons
 a = 0.02
@@ -28,13 +30,13 @@ du/dt=(a*(b*v-u))/ms:1
 dg_ampa/dt = -g_ampa/tau_ampa+z/ms : 1
 dz/dt = (-z/tau_ampa): 1
 I_syn=g_ampa*(E-v) : 1
-I = I0 / sqrt(((x-foodx)**2+(y-foody)**2)): 1
+I = I0 / sqrt(((x-imagex)**2+(y-imagey)**2)): 1
 y : 1
 x : 1
 x_disp : 1
 y_disp : 1
-foodx : 1
-foody : 1
+imagex : 1
+imagey : 1
 mag :1
 
 '''
@@ -44,6 +46,7 @@ v = c
 u = u + d
 '''
 
+# 2 Right Sensory Neurons ( 1 for coward 1 for aggressor)
 sr = NeuronGroup(2, sensor_eqs, clock=Clock(0.2 * ms), threshold="v>=30", reset=sensor_reset)
 sr.v = c
 sr.u = c * b
@@ -51,10 +54,11 @@ sr.x_disp = 5
 sr.y_disp = 5
 sr.x = sr.x_disp
 sr.y = sr.y_disp
-sr.foodx = foodx
-sr.foody = foody
+sr.imagex = imagex
+sr.imagey = imagey
 sr.mag = 1
 
+# 2 Left Sensory Neurons ( 1 for coward 1 for aggressor)
 sl = NeuronGroup(2, sensor_eqs, clock=Clock(0.2 * ms), threshold="v>=30", reset=sensor_reset)
 sl.v = c
 sl.u = c * b
@@ -62,28 +66,28 @@ sl.x_disp = -5
 sl.y_disp = 5
 sl.x = sl.x_disp
 sl.y = sl.y_disp
-sl.foodx = foodx
-sl.foody = foody
+sl.imagex = imagex
+sl.imagey = imagey
 sl.mag = 1
 
+# Right Motor Neuron
 sbr = NeuronGroup(1, sensor_eqs, clock=Clock(0.2 * ms), threshold="v>=30", reset=sensor_reset)  # motor neuron
 sbr.v = c
 sbr.u = c * b
-sbr.foodx = foodx
-sbr.foody = foody
+sbr.imagex = imagex
+sbr.imagey = imagey
 sbr.mag = 0
 
+
+# Left Motor Neuron
 sbl = NeuronGroup(1, sensor_eqs, clock=Clock(0.2 * ms), threshold="v>=30", reset=sensor_reset)  # motor neuron
 sbl.v = c
 sbl.u = c * b
-sbl.foodx = foodx
-sbl.foody = foody
+sbl.imagex = imagex
+sbl.imagey = imagey
 sbl.mag = 0
 
 # The virtual bug - may need to adjust these
-
-
-
 taum = 4 * ms
 base_speed = 75
 turn_rate = 50 * Hz
@@ -100,6 +104,7 @@ I1:1
 I2:1
 '''
 
+
 bug = NeuronGroup(1, bug_eqs, clock=Clock(0.2 * ms))
 bug.motorl = 0
 bug.motorr = 0
@@ -108,6 +113,8 @@ bug.x = 0
 bug.y = 0
 
 # Synapses (sensors communicate with bug motor)
+
+
 
 # agressor synapses
 w = 2
@@ -160,7 +167,8 @@ syn_l.connect(i=[0], j=[0])
 
 f = figure(1)
 bug_plot = plot(bug.x, bug.y, 'ko')
-food_plot = plot(foodx, foody, 'b*')
+image_plot = plot(imagex, imagey, 'b*')
+# Include Image plot somewhere
 sr_plot = plot([0], [0], 'w')  # Just leaving it blank for now
 sl_plot = plot([0], [0], 'w')
 
@@ -169,7 +177,7 @@ sl_plot = plot([0], [0], 'w')
 
 @network_operation()
 def update_positions():
-    global foodx, foody, food_count, FC, food_color, E
+    global imagex, imagey, image_count, FC, food_color, E
     sr.x = bug.x + sr.x_disp * sin(bug.angle) + sr.y_disp * cos(bug.angle)
     sr.y = bug.y + - sr.x_disp * cos(bug.angle) + sr.y_disp * sin(bug.angle)
 
@@ -182,12 +190,36 @@ def update_positions():
     #    sl.x = bug.x + sl.x_disp*cos(bug.angle-pi/2) - sl.y_disp*sin(bug.angle-pi/2)
     #    sl.y = bug.y + sl.x_disp*sin(bug.angle-pi/2) + sl.y_disp*cos(bug.angle-pi/2)
 
+    ##################### Umar Edits ########################
+    image = 'Images/7.jpg'
+    alpha, beta, label = decision(image)
+    totalTime = duration
 
-    FoodColor = randint(1, 2)
-    if ((bug.x - foodx) ** 2 + (bug.y - foody) ** 2) < 16:
-        food_count += 1
-        foodx = randint(-map_size + 10, map_size - 10)
-        foody = randint(-map_size + 10, map_size - 10)
+    # Modulate Activity of Coward and Aggressor NN based on Label
+    syn_ll_c.g_synmax = g_synmaxval*alpha
+    syn_rr_c.g_synmax = g_synmaxval*alpha
+    syn_ll_a.g_synmax = g_synmaxval*beta
+    syn_rr_a.g_synmax = g_synmaxval*beta
+
+    #####image = 'Images/7.jpg'image = 'Images/7.jpg'######
+    survival_time = 1000
+    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 10:
+        image_count += 1
+        err, delta = error(totalTime, label)
+        update_error(err,label)
+        update_decision(label) # Implement ud()
+        survival_time += delta # Get Current clock time
+
+        if survival_time <= 0:
+            # end Simulation
+            print Clock.t
+            Network.stop()
+
+        imagex = randint(-map_size + 10, map_size - 10)
+        imagey = randint(-map_size + 10, map_size - 10)
+
+
+
         if FoodColor == 1:
             food_color = 'r*'
             syn_ll_c.g_synmax = g_synmaxval
@@ -214,17 +246,17 @@ def update_positions():
         bug.y = map_size
         bug.angle = -bug.angle
 
-    sr.foodx = foodx
-    sr.foody = foody
-    sl.foodx = foodx
-    sl.foody = foody
+    sr.imagex = imagex
+    sr.imagey = imagey
+    sl.imagex = imagex
+    sl.imagey = imagey
 
 
 @network_operation(dt=15 * ms)
 def update_plot():
-    global foodx, foody, bug_plot, food_plot, sr_plot, sl_plot, FC, food_color
+    global imagex, imagey, bug_plot, image_plot, sr_plot, sl_plot
     bug_plot[0].remove()
-    food_plot[0].remove()
+    image_plot[0].remove()
     #sr_plot[0].remove()
     # sl_plot[0].remove()
     bug_x_coords = [bug.x, bug.x - 2 * cos(bug.angle), bug.x - 4 * cos(bug.angle)]  # ant-like body
@@ -232,7 +264,7 @@ def update_plot():
     bug_plot = plot(bug_x_coords, bug_y_coords, 'ko')  # Plot the bug's current position
     #sr_plot = plot([bug.x, sr.x], [bug.y, sr.y], 'k')  # plot the antenna
     # sl_plot = plot([bug.x, sl.x], [bug.y, sl.y], 'k')     #plot the antenna
-    food_plot = plot(foodx, foody, food_color)
+    image_plot = plot(imagex, imagey, food_color)
     axis([-100, 100, -100, 100])
     draw()
     # print "."
@@ -261,12 +293,12 @@ run(duration)
 
 plt.clf()
 plt.plot(MB.x[0], MB.y[0])
-plt.plot(foodx, foody, food_color)
+plt.plot(imagex, imagey, food_color)
 axis([-100, 100, -100, 100])
 title('Path')
 show()
 plt.plot(MB.x[0], MB.y[0])
-plt.plot(foodx, foody, food_color)
+plt.plot(imagex, imagey, food_color)
 axis([-100, 100, -100, 100])
 title('Path')
 show()
