@@ -25,13 +25,18 @@ def adjustValue(key, error): #pseudo backpropagation
     params = bug_memory.get(key)
     if error < 0:
         if (params[0]-abs(error)<0 or params[1]+abs(error)>1):
-            error *= 0.1
-        params[0] -= abs(error) # decrease alpha
-        params[1] += abs(error) # increase beta
+            params[0] = params[3]# expected alpha
+            params[1] = params[4] # expected beta
+        else:
+            params[0] -= abs(error) # decrease alpha
+            params[1] += abs(error) # increase beta
     elif error > 0:
         if (params[0]+abs(error)>1 or params[1]-abs(error)<0):
-            error *= 0.1
-        params[0] += abs(error) # increase alpha
-        params[1] -= abs(error) # decrease beta
-    bug_memory[key] = params
+            params[0] = params[3] # expected alpha
+            params[1] = params[4] # expected beta
+        else:
+            params[0] += abs(error) # increase alpha
+            params[1] -= abs(error) # decrease beta
+    bug_memory[key][0] = params[0]
+    bug_memory[key][1] = params[1]
     #!!!!!!!!!! Dictionary Values Not Being Stored !!!!!!!!!!!!!!!#
