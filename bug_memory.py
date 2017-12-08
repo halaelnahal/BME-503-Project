@@ -39,4 +39,3 @@ def adjustValue(key, error): #pseudo backpropagation
             params[1] -= abs(error) # decrease beta
     bug_memory[key][0] = params[0]
     bug_memory[key][1] = params[1]
-    #!!!!!!!!!! Dictionary Values Not Being Stored !!!!!!!!!!!!!!!#
