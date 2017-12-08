@@ -21,8 +21,8 @@ def error(totalTime, label):
     #           increase alpha and decrease beta
     params = memory.getValue(label)
     delta = -1*params[2]
+    print(delta)
     survivalAdjustment = (delta)/(totalTime)
-    print(error)
     # if delta = -100  and totalTime = 1000 error should be 0.1
     return survivalAdjustment, delta
 
