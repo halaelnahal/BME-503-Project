@@ -2,7 +2,7 @@ from brian2 import *
 import matplotlib.pyplot as plt
 from random import randint
 from main import decision, error
-from bug_memory import adjustValue
+import bug_memory as memory
 from google_vision_api import requestLabel
 
 
@@ -207,13 +207,13 @@ def update_positions():
         syn_rr_c.g_synmax = g_synmaxval*alpha
         syn_ll_a.g_synmax = g_synmaxval*beta
         syn_rr_a.g_synmax = g_synmaxval*beta
-        print(alpha)
-        print(beta)
+        print(memory.bug_memory[label][0])
+        print(memory.bug_memory[label][1])
         image_count += 1
         [survivalAdjustment, delta] = error(totalTime, label)
-        adjustValue(label,survivalAdjustment)
-        print(alpha)
-        print(beta)
+        memory.adjustValue(label,survivalAdjustment)
+        print(memory.bug_memory[label][0])
+        print(memory.bug_memory[label][1])
         #update_decision(label) # Implement ud()
         survival_time += delta # Get Current clock time
         print(survival_time,delta)
@@ -225,21 +225,6 @@ def update_positions():
 
         imagex = randint(-map_size + 10, map_size - 10)
         imagey = randint(-map_size + 10, map_size - 10)
-
-
-#
-#        if FoodColor == 1:
-#            food_color = 'r*'
-#            syn_ll_c.g_synmax = g_synmaxval
-#            syn_rr_c.g_synmax = g_synmaxval
-#            syn_ll_a.g_synmax = 0
-#            syn_rr_a.g_synmax = 0
-#        elif FoodColor == 2:
-#            food_color = 'g*'
-#            syn_ll_c.g_synmax = 0
-#            syn_rr_c.g_synmax = 0
-#            syn_ll_a.g_synmax = g_synmaxval
-#            syn_rr_a.g_synmax = g_synmaxval
 
     if (bug.x < -map_size):
         bug.x = -map_size
@@ -265,13 +250,13 @@ def update_plot():
     global imagex, imagey, bug_plot, image_plot, sr_plot, sl_plot
     bug_plot[0].remove()
     image_plot[0].remove()
-    #sr_plot[0].remove()
-    # sl_plot[0].remove()
+#    sr_plot[0].remove()
+#    sl_plot[0].remove()
     bug_x_coords = [bug.x, bug.x - 2 * cos(bug.angle), bug.x - 4 * cos(bug.angle)]  # ant-like body
     bug_y_coords = [bug.y, bug.y - 2 * sin(bug.angle), bug.y - 4 * sin(bug.angle)]
     bug_plot = plot(bug_x_coords, bug_y_coords, 'ko')  # Plot the bug's current position
-    #sr_plot = plot([bug.x, sr.x], [bug.y, sr.y], 'k')  # plot the antenna
-    # sl_plot = plot([bug.x, sl.x], [bug.y, sl.y], 'k')     #plot the antenna
+#    sr_plot = plot([bug.x, sr.x], [bug.y, sr.y], 'k')  # plot the antenna
+#    sl_plot = plot([bug.x, sl.x], [bug.y, sl.y], 'k')     #plot the antenna
     image_plot = plot(imagex, imagey,'b*')
     axis([-100, 100, -100, 100])
     draw()
