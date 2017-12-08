@@ -1,7 +1,7 @@
 from brian2 import *
 import matplotlib.pyplot as plt
 from random import randint
-import main
+from main import decision, error
 from bug_memory import adjustValue
 from google_vision_api import requestLabel
 
@@ -178,7 +178,7 @@ sl_plot = plot([0], [0], 'w')
 
 @network_operation()
 def update_positions():
-    global imagex, imagey, image_count, FC, food_color, E
+    global imagex, imagey, image_count, FC, E
     sr.x = bug.x + sr.x_disp * sin(bug.angle) + sr.y_disp * cos(bug.angle)
     sr.y = bug.y + - sr.x_disp * cos(bug.angle) + sr.y_disp * sin(bug.angle)
 
@@ -193,7 +193,7 @@ def update_positions():
 
     ##################### Umar Edits ########################
     image = 'Images/7.jpg'
-    alpha, beta, label = decision(image)
+    [alpha, beta, label] = decision(image)
     totalTime = duration
 
     # Modulate Activity of Coward and Aggressor NN based on Label
@@ -206,8 +206,8 @@ def update_positions():
     survival_time = 1000
     if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 10:
         image_count += 1
-        err, delta = error(totalTime, label)
-        adjustValue(label,err)
+        [err, delta] = error(totalTime, label)
+        adjustValue(label,error)
         #update_decision(label) # Implement ud()
         survival_time += delta # Get Current clock time
 
@@ -265,7 +265,7 @@ def update_plot():
     bug_plot = plot(bug_x_coords, bug_y_coords, 'ko')  # Plot the bug's current position
     #sr_plot = plot([bug.x, sr.x], [bug.y, sr.y], 'k')  # plot the antenna
     # sl_plot = plot([bug.x, sl.x], [bug.y, sl.y], 'k')     #plot the antenna
-    image_plot = plot(imagex, imagey, food_color)
+    image_plot = plot(imagex, imagey)
     axis([-100, 100, -100, 100])
     draw()
     # print "."
@@ -294,12 +294,12 @@ run(duration)
 
 plt.clf()
 plt.plot(MB.x[0], MB.y[0])
-plt.plot(imagex, imagey, food_color)
+plt.plot(imagex, imagey)
 axis([-100, 100, -100, 100])
 title('Path')
 show()
 plt.plot(MB.x[0], MB.y[0])
-plt.plot(imagex, imagey, food_color)
+plt.plot(imagex, imagey)
 axis([-100, 100, -100, 100])
 title('Path')
 show()
