@@ -178,7 +178,7 @@ sl_plot = plot([0], [0], 'w')
 
 @network_operation()
 def update_positions():
-    global imagex, imagey, image_count, FC, E
+    global imagex, imagey, image_count
     sr.x = bug.x + sr.x_disp * sin(bug.angle) + sr.y_disp * cos(bug.angle)
     sr.y = bug.y + - sr.x_disp * cos(bug.angle) + sr.y_disp * sin(bug.angle)
 
@@ -206,8 +206,8 @@ def update_positions():
     survival_time = 1000
     if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 10:
         image_count += 1
-        [err, delta] = error(totalTime, label)
-        adjustValue(label,error)
+        [survivalAdjustment, delta] = error(totalTime, label)
+        adjustValue(label,survivalAdjustment)
         #update_decision(label) # Implement ud()
         survival_time += delta # Get Current clock time
 
