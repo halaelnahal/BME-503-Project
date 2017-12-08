@@ -207,16 +207,16 @@ def update_positions():
         syn_rr_c.g_synmax = g_synmaxval*alpha
         syn_ll_a.g_synmax = g_synmaxval*beta
         syn_rr_a.g_synmax = g_synmaxval*beta
-        print(memory.bug_memory[label][0]) #print alpha and beta before adjustment
-        print(memory.bug_memory[label][1])
+        print("The alpha value before backpropagation is", memory.bug_memory[label][0]) #print alpha and beta before adjustment
+        print("The beta value before backpropagation is", memory.bug_memory[label][1])
         image_count += 1
         [survivalAdjustment, delta] = error(totalTime, label)
         memory.adjustValue(label,survivalAdjustment)
-        print(memory.bug_memory[label][0]) #print alpha and beta after adjustment
-        print(memory.bug_memory[label][1])
+        print("The alpha value after backpropagation is", memory.bug_memory[label][0]) #print alpha and beta after adjustment
+        print("The beta value after backpropagation is", memory.bug_memory[label][1])
         #update_decision(label) # Implement ud()
         survival_time -= delta # Get Current clock time
-        print(survival_time,delta)
+        print("The survival time is", survival_time, "and has changed by", delta, "during this iteration\n")
 
         if survival_time <= 0:
             # end Simulation
