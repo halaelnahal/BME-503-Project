@@ -21,9 +21,10 @@ def error(totalTime, label):
     #           increase alpha and decrease beta
     params = memory.getValue(label)
     delta = -1*params[2]
-    error = float(delta)/float(totalTime)
+    survivalAdjustment = (delta)/(totalTime)
+    print(error)
     # if delta = -100  and totalTime = 1000 error should be 0.1
-    return error, params[2]
+    return survivalAdjustment, params[2]
 
 
 def update_error(error,label):
@@ -39,13 +40,13 @@ print('beta: ', beta)
 print('label: ', label)
 print('####################  Starting Simulation ############################')
 totalTime = 1000;
-err = error(totalTime, label)
-print('Error: ', err)
-update_error(err,label)
+[survivalAdjustment, timeAdjustment]= error(totalTime, label)
+print('Error: ', survivalAdjustment, timeAdjustment)
+update_error(survivalAdjustment,label)
 params = memory.getValue(label)
 print('alpha: ', params[0])
 print('beta: ', params[1])
 print('######iteration 2#############')
 print(memory.getValue('spider'))
-update_error(err,label)
+update_error(survivalAdjustment,label)
 print(memory.getValue('spider'))
