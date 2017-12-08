@@ -24,7 +24,7 @@ def error(totalTime, label):
     survivalAdjustment = (delta)/(totalTime)
     print(error)
     # if delta = -100  and totalTime = 1000 error should be 0.1
-    return survivalAdjustment, params[2]
+    return survivalAdjustment, delta
 
 
 def update_error(error,label):
