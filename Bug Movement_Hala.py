@@ -2,6 +2,7 @@ from brian2 import *
 import matplotlib.pyplot as plt
 from random import randint
 import main
+from bug_memory import adjustValue
 from google_vision_api import requestLabel
 
 
@@ -206,32 +207,32 @@ def update_positions():
     if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 10:
         image_count += 1
         err, delta = error(totalTime, label)
-        update_error(err,label)
-        update_decision(label) # Implement ud()
+        adjustValue(label,err)
+        #update_decision(label) # Implement ud()
         survival_time += delta # Get Current clock time
 
         if survival_time <= 0:
             # end Simulation
-            print Clock.t
+            print(Clock.t)
             Network.stop()
 
         imagex = randint(-map_size + 10, map_size - 10)
         imagey = randint(-map_size + 10, map_size - 10)
 
 
-
-        if FoodColor == 1:
-            food_color = 'r*'
-            syn_ll_c.g_synmax = g_synmaxval
-            syn_rr_c.g_synmax = g_synmaxval
-            syn_ll_a.g_synmax = 0
-            syn_rr_a.g_synmax = 0
-        elif FoodColor == 2:
-            food_color = 'g*'
-            syn_ll_c.g_synmax = 0
-            syn_rr_c.g_synmax = 0
-            syn_ll_a.g_synmax = g_synmaxval
-            syn_rr_a.g_synmax = g_synmaxval
+#
+#        if FoodColor == 1:
+#            food_color = 'r*'
+#            syn_ll_c.g_synmax = g_synmaxval
+#            syn_rr_c.g_synmax = g_synmaxval
+#            syn_ll_a.g_synmax = 0
+#            syn_rr_a.g_synmax = 0
+#        elif FoodColor == 2:
+#            food_color = 'g*'
+#            syn_ll_c.g_synmax = 0
+#            syn_rr_c.g_synmax = 0
+#            syn_ll_a.g_synmax = g_synmaxval
+#            syn_rr_a.g_synmax = g_synmaxval
 
     if (bug.x < -map_size):
         bug.x = -map_size
