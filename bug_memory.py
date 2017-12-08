@@ -18,24 +18,24 @@ bug_memory['rose'] = [0.49, 0.51, 20, 0, 1]
 bug_memory['leaf'] = [0.49, 0.51, 20, 0, 1]
 bug_memory['orange'] = [0.49, 0.51, 10, 0, 1]
 
-def getValue(key):
-    return bug_memory[key]
+def getValue(label):
+    return bug_memory[label]
 
-def adjustValue(key, error): #pseudo backpropagation
-    params = bug_memory.get(key)
-    if error < 0:
-        if (params[0]-abs(error)<0 or params[1]+abs(error)>1):
+def adjustValue(label, survivalAdjustment): #pseudo backpropagation
+    params = bug_memory.get(label)
+    if survivalAdjustment < 0:
+        if (params[0]-abs(survivalAdjustment)<0 or params[1]+abs(survivalAdjustment)>1):
             params[0] = params[3]# expected alpha
             params[1] = params[4] # expected beta
         else:
-            params[0] -= abs(error) # decrease alpha
-            params[1] += abs(error) # increase beta
-    elif error > 0:
-        if (params[0]+abs(error)>1 or params[1]-abs(error)<0):
+            params[0] -= abs(survivalAdjustment) # decrease alpha
+            params[1] += abs(survivalAdjustment) # increase beta
+    elif survivalAdjustment > 0:
+        if (params[0]+abs(survivalAdjustment)>1 or params[1]-abs(survivalAdjustment)<0):
             params[0] = params[3] # expected alpha
             params[1] = params[4] # expected beta
         else:
-            params[0] += abs(error) # increase alpha
-            params[1] -= abs(error) # decrease beta
-    bug_memory[key][0] = params[0]
-    bug_memory[key][1] = params[1]
+            params[0] += abs(survivalAdjustment) # increase alpha
+            params[1] -= abs(survivalAdjustment) # decrease beta
+    bug_memory[label][0] = params[0]
+    bug_memory[label][1] = params[1]
