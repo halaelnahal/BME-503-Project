@@ -24,7 +24,7 @@ tau_ampa = 1.0 * ms
 g_synpk = 0.4
 g_synmaxval = (g_synpk / (tau_ampa / ms * exp(-1)))
 
-E = 0
+E = -80
 sensor_eqs = '''
 dv/dt=(0.04*v**2+5*v+140-u+I+I_syn)/ms :1
 du/dt=(a*(b*v-u))/ms:1
@@ -39,7 +39,6 @@ y_disp : 1
 imagex : 1
 imagey : 1
 mag :1
-
 '''
 
 sensor_reset = '''
@@ -175,10 +174,16 @@ sl_plot = plot([0], [0], 'w')
 
 
 # Additional update rules (not covered/possible in above eqns)
+survival_time = 1000
+# Modulate Activity of Coward and Aggressor NN based on Label
+syn_ll_c.g_synmax = g_synmaxval*0.15
+syn_rr_c.g_synmax = g_synmaxval*0.15
+syn_ll_a.g_synmax = g_synmaxval*0.85
+syn_rr_a.g_synmax = g_synmaxval*0.85
 
 @network_operation()
 def update_positions():
-    global imagex, imagey, image_count
+    global imagex, imagey, image_count, survival_time
     sr.x = bug.x + sr.x_disp * sin(bug.angle) + sr.y_disp * cos(bug.angle)
     sr.y = bug.y + - sr.x_disp * cos(bug.angle) + sr.y_disp * sin(bug.angle)
 
@@ -193,23 +198,25 @@ def update_positions():
 
     ##################### Umar Edits ########################
     image = 'Images/7.jpg'
-    [alpha, beta, label] = decision(image)
-    totalTime = duration
-
-    # Modulate Activity of Coward and Aggressor NN based on Label
-    syn_ll_c.g_synmax = g_synmaxval*alpha
-    syn_rr_c.g_synmax = g_synmaxval*alpha
-    syn_ll_a.g_synmax = g_synmaxval*beta
-    syn_rr_a.g_synmax = g_synmaxval*beta
+    totalTime = duration/ms
 
     #####image = 'Images/7.jpg'image = 'Images/7.jpg'######
-    survival_time = 1000
-    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 10:
+    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 50:
+        [alpha, beta, label] = decision(image)
+        syn_ll_c.g_synmax = g_synmaxval*alpha
+        syn_rr_c.g_synmax = g_synmaxval*alpha
+        syn_ll_a.g_synmax = g_synmaxval*beta
+        syn_rr_a.g_synmax = g_synmaxval*beta
+        print(alpha)
+        print(beta)
         image_count += 1
         [survivalAdjustment, delta] = error(totalTime, label)
         adjustValue(label,survivalAdjustment)
+        print(alpha)
+        print(beta)
         #update_decision(label) # Implement ud()
         survival_time += delta # Get Current clock time
+        print(survival_time,delta)
 
         if survival_time <= 0:
             # end Simulation
@@ -265,7 +272,7 @@ def update_plot():
     bug_plot = plot(bug_x_coords, bug_y_coords, 'ko')  # Plot the bug's current position
     #sr_plot = plot([bug.x, sr.x], [bug.y, sr.y], 'k')  # plot the antenna
     # sl_plot = plot([bug.x, sl.x], [bug.y, sl.y], 'k')     #plot the antenna
-    image_plot = plot(imagex, imagey)
+    image_plot = plot(imagex, imagey,'b*')
     axis([-100, 100, -100, 100])
     draw()
     # print "."
