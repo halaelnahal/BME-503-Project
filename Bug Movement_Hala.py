@@ -1,18 +1,23 @@
 from brian2 import *
 import matplotlib.pyplot as plt
+import matplotlib.pylab as pylab
 from random import randint
 from main import decision, error
 import bug_memory as memory
 from google_vision_api import requestLabel
 from PIL import Image
 
+start_scope()
 
 map_size = 100
-global imagex, imagey, image_count, bug_plot, image_plot, sr_plot, sl_plot
+global imagex, imagey, image_count, bug_plot, image_plot, sr_plot, sl_plot, E
 duration = 5000 * ms
 imagex = 50
 imagey = 50
 image_count = 0
+
+params = {'figure.figsize':(10,5)}
+pylab.rcParams.update(params)
 
 # Sensor neurons
 a = 0.02
@@ -25,7 +30,12 @@ tau_ampa = 1.0 * ms
 g_synpk = 0.4
 g_synmaxval = (g_synpk / (tau_ampa / ms * exp(-1)))
 
-E = -80
+#if memory.bug_memory[label][0]>0.5:
+#    E=0
+#elif memory.bug_memory[label][0]<0.5:
+#    E=-80
+E=-80
+    
 sensor_eqs = '''
 dv/dt=(0.04*v**2+5*v+140-u+I+I_syn)/ms :1
 du/dt=(a*(b*v-u))/ms:1
@@ -91,7 +101,7 @@ sbl.mag = 0
 # The virtual bug - may need to adjust these
 taum = 4 * ms
 base_speed = 75
-turn_rate = 75 * Hz #originally 50
+turn_rate = 100 * Hz #originally 50
 
 bug_eqs = '''
 #actuation equations go here
@@ -118,7 +128,7 @@ bug.y = 0
 
 
 # agressor synapses
-w = 2
+w = 2 #originally 2
 syn_rr_a = Synapses(sr, sbr, clock=Clock(0.2 * ms), model='''
                 g_synmax:1
                 ''',
@@ -140,7 +150,7 @@ syn_ll_a.connect(i=[0], j=[0])
 syn_ll_a.g_synmax = g_synmaxval
 
 # coward synapses
-w = 2
+w = 2 #originally 2
 syn_rr_c = Synapses(sr, sbr, clock=Clock(0.2 * ms), model='''
                 g_synmax:1
                 ''',
@@ -175,12 +185,12 @@ sl_plot = plot([0], [0], 'w')
 
 
 # Additional update rules (not covered/possible in above eqns)
-survival_time = 1000
+survival_time = 750
 # Modulate Activity of Coward and Aggressor NN based on Label
-syn_ll_c.g_synmax = g_synmaxval*0.15
-syn_rr_c.g_synmax = g_synmaxval*0.15
-syn_ll_a.g_synmax = g_synmaxval*0.85
-syn_rr_a.g_synmax = g_synmaxval*0.85
+syn_ll_c.g_synmax = g_synmaxval*0
+syn_rr_c.g_synmax = g_synmaxval*0
+syn_ll_a.g_synmax = g_synmaxval*1
+syn_rr_a.g_synmax = g_synmaxval*1
 
 @network_operation()
 def update_positions():
@@ -199,10 +209,11 @@ def update_positions():
 
     ##################### Umar Edits ########################
     image = 'Images/7.jpg'
-    totalTime = duration/ms
+#    totalTime = duration/ms
+    totalTime=1000
 
     #####image = 'Images/7.jpg'image = 'Images/7.jpg'######
-    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 100:
+    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 50:
         [alpha, beta, label] = decision(image)
         img=Image.open(image)
 #        img.show()
@@ -221,6 +232,12 @@ def update_positions():
         memory.adjustValue(label,survivalAdjustment)
         print("The alpha value after backpropagation is", memory.bug_memory[label][0]) #print alpha and beta after adjustment
         print("The beta value after backpropagation is", memory.bug_memory[label][1])
+        
+        if memory.bug_memory[label][0]>0.5:
+            E=0
+        elif memory.bug_memory[label][0]<0.5:
+            E=-80
+        print("The E value is", E)
         #update_decision(label) # Implement ud()
         survival_time -= delta # Get Current clock time
         print("The survival time is", survival_time, "and has changed by", delta, "during this iteration\n")
@@ -252,7 +269,7 @@ def update_positions():
     sl.imagey = imagey
 
 
-@network_operation(dt=15 * ms)
+@network_operation(dt=5 * ms) #originally 15
 def update_plot():
     global imagex, imagey, bug_plot, image_plot, sr_plot, sl_plot
     bug_plot[0].remove()
@@ -264,6 +281,8 @@ def update_plot():
     bug_plot = plot(bug_x_coords, bug_y_coords, 'ko')  # Plot the bug's current position
 #    sr_plot = plot([bug.x, sr.x], [bug.y, sr.y], 'k')  # plot the antenna
 #    sl_plot = plot([bug.x, sl.x], [bug.y, sl.y], 'k')     #plot the antenna
+#    fig=pl1t.subplot(2,2,figsize=(5,10))
+    fig=plt.figure(num=1,figsize=(5,10))
     fig=plt.subplot(121)
     image_plot = plot(imagex, imagey,'b*')
     axis([-100, 100, -100, 100])
