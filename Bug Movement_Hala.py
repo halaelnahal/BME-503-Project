@@ -4,6 +4,7 @@ from random import randint
 from main import decision, error
 import bug_memory as memory
 from google_vision_api import requestLabel
+from PIL import Image
 
 
 map_size = 100
@@ -90,7 +91,7 @@ sbl.mag = 0
 # The virtual bug - may need to adjust these
 taum = 4 * ms
 base_speed = 75
-turn_rate = 50 * Hz
+turn_rate = 75 * Hz #originally 50
 
 bug_eqs = '''
 #actuation equations go here
@@ -201,8 +202,14 @@ def update_positions():
     totalTime = duration/ms
 
     #####image = 'Images/7.jpg'image = 'Images/7.jpg'######
-    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 50:
+    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 100:
         [alpha, beta, label] = decision(image)
+        img=Image.open(image)
+#        img.show()
+#        plt.figure(2)
+        plt.subplot(122)
+        imgplot=plt.imshow(img)
+        plt.axis('off')
         syn_ll_c.g_synmax = g_synmaxval*alpha
         syn_rr_c.g_synmax = g_synmaxval*alpha
         syn_ll_a.g_synmax = g_synmaxval*beta
@@ -257,6 +264,7 @@ def update_plot():
     bug_plot = plot(bug_x_coords, bug_y_coords, 'ko')  # Plot the bug's current position
 #    sr_plot = plot([bug.x, sr.x], [bug.y, sr.y], 'k')  # plot the antenna
 #    sl_plot = plot([bug.x, sl.x], [bug.y, sl.y], 'k')     #plot the antenna
+    fig=plt.subplot(121)
     image_plot = plot(imagex, imagey,'b*')
     axis([-100, 100, -100, 100])
     draw()
