@@ -11,7 +11,7 @@ start_scope()
 plt.close('all')
 
 map_size = 100
-global imagex, imagey, image_count, bug_plot, image_plot, sr_plot, sl_plot
+global imagex, imagey, image_count, bug_plot, image_plot, sr_plot, sl_plot, E
 duration = 5000 * ms
 imagex = 50
 imagey = 50
@@ -37,7 +37,7 @@ if memory.bug_memory[label][0]>0.5:
     E=0
 elif memory.bug_memory[label][0]<0.5:
     E=-80
-    
+
 sensor_eqs = '''
 dv/dt=(0.04*v**2+5*v+140-u+I+I_syn)/ms :1
 du/dt=(a*(b*v-u))/ms:1
@@ -52,6 +52,7 @@ y_disp : 1
 imagex : 1
 imagey : 1
 mag :1
+E : 1
 '''
 
 sensor_reset = '''
@@ -70,6 +71,7 @@ sr.y = sr.y_disp
 sr.imagex = imagex
 sr.imagey = imagey
 sr.mag = 1
+sr.E = E
 
 # 2 Left Sensory Neurons ( 1 for coward 1 for aggressor)
 sl = NeuronGroup(2, sensor_eqs, clock=Clock(0.2 * ms), threshold="v>=30", reset=sensor_reset)
@@ -82,6 +84,7 @@ sl.y = sl.y_disp
 sl.imagex = imagex
 sl.imagey = imagey
 sl.mag = 1
+sl.E = E
 
 # Right Motor Neuron
 sbr = NeuronGroup(1, sensor_eqs, clock=Clock(0.2 * ms), threshold="v>=30", reset=sensor_reset)  # motor neuron
@@ -90,6 +93,7 @@ sbr.u = c * b
 sbr.imagex = imagex
 sbr.imagey = imagey
 sbr.mag = 0
+sbr.E = E
 
 
 # Left Motor Neuron
@@ -99,6 +103,7 @@ sbl.u = c * b
 sbl.imagex = imagex
 sbl.imagey = imagey
 sbl.mag = 0
+sbl.E = E
 
 # The virtual bug - may need to adjust these
 taum = 4 * ms
@@ -194,10 +199,10 @@ syn_rr_c.g_synmax = g_synmaxval*alpha
 syn_ll_a.g_synmax = g_synmaxval*beta
 syn_rr_a.g_synmax = g_synmaxval*beta
 
-#print(syn_ll_c.g_synmax)
-#print(syn_rr_c.g_synmax)
-#print(syn_ll_a.g_synmax)
-#print(syn_rr_a.g_synmax)
+print('coward', syn_ll_c.g_synmax)
+print('coward', syn_rr_c.g_synmax)
+print('aggressor', syn_ll_a.g_synmax)
+print('aggressor', syn_rr_a.g_synmax)
 
 @network_operation()
 def update_positions():
@@ -219,7 +224,7 @@ def update_positions():
     totalTime=1000
 
     #####image = 'Images/7.jpg'image = 'Images/7.jpg'######
-    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 100:
+    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 50:
         [alpha, beta, label] = decision(image)
         img=Image.open(image)
         plt.subplot(122)
@@ -239,10 +244,24 @@ def update_positions():
         print("The beta value after backpropagation is", memory.bug_memory[label][1])
         print(memory.getValue(label))
         
+        syn_ll_c.g_synmax = g_synmaxval*memory.bug_memory[label][0]
+        syn_rr_c.g_synmax = g_synmaxval*memory.bug_memory[label][0]
+        syn_ll_a.g_synmax = g_synmaxval*memory.bug_memory[label][1]
+        syn_rr_a.g_synmax = g_synmaxval*memory.bug_memory[label][1]
+        
+        print('coward', syn_ll_c.g_synmax)
+        print('coward', syn_rr_c.g_synmax)
+        print('aggressor', syn_ll_a.g_synmax)
+        print('aggressor', syn_rr_a.g_synmax)
+        
         if memory.bug_memory[label][0]>0.5:
             E=0
         elif memory.bug_memory[label][0]<0.5:
             E=-80
+        sr.E = E
+        sl.E = E
+        sbr.E = E
+        sbl.E = E
         print("The E value is", E)
         #update_decision(label) # Implement ud()
         survival_time -= delta # Get Current clock time
