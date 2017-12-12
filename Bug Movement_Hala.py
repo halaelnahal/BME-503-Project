@@ -8,9 +8,10 @@ from google_vision_api import requestLabel
 from PIL import Image
 
 start_scope()
+plt.close('all')
 
 map_size = 100
-global imagex, imagey, image_count, bug_plot, image_plot, sr_plot, sl_plot, E
+global imagex, imagey, image_count, bug_plot, image_plot, sr_plot, sl_plot
 duration = 5000 * ms
 imagex = 50
 imagey = 50
@@ -23,18 +24,19 @@ pylab.rcParams.update(params)
 a = 0.02
 b = 0.2
 c = -65
-d = 8
+d = 0.5 #8
 
-I0 = 2000
-tau_ampa = 1.0 * ms
-g_synpk = 0.4
+I0 = 2000 #2000
+tau_ampa = 1.0 * ms #1.0
+g_synpk = 0.4 #0.4
 g_synmaxval = (g_synpk / (tau_ampa / ms * exp(-1)))
 
-#if memory.bug_memory[label][0]>0.5:
-#    E=0
-#elif memory.bug_memory[label][0]<0.5:
-#    E=-80
-E=-80
+image = 'Images/7.jpg'
+[alpha, beta, label] = decision(image)
+if memory.bug_memory[label][0]>0.5:
+    E=0
+elif memory.bug_memory[label][0]<0.5:
+    E=-80
     
 sensor_eqs = '''
 dv/dt=(0.04*v**2+5*v+140-u+I+I_syn)/ms :1
@@ -100,7 +102,7 @@ sbl.mag = 0
 
 # The virtual bug - may need to adjust these
 taum = 4 * ms
-base_speed = 75
+base_speed = 100
 turn_rate = 100 * Hz #originally 50
 
 bug_eqs = '''
@@ -185,42 +187,45 @@ sl_plot = plot([0], [0], 'w')
 
 
 # Additional update rules (not covered/possible in above eqns)
-survival_time = 750
+survival_time = 1000
 # Modulate Activity of Coward and Aggressor NN based on Label
-syn_ll_c.g_synmax = g_synmaxval*0
-syn_rr_c.g_synmax = g_synmaxval*0
-syn_ll_a.g_synmax = g_synmaxval*1
-syn_rr_a.g_synmax = g_synmaxval*1
+syn_ll_c.g_synmax = g_synmaxval*alpha
+syn_rr_c.g_synmax = g_synmaxval*alpha
+syn_ll_a.g_synmax = g_synmaxval*beta
+syn_rr_a.g_synmax = g_synmaxval*beta
+
+#print(syn_ll_c.g_synmax)
+#print(syn_rr_c.g_synmax)
+#print(syn_ll_a.g_synmax)
+#print(syn_rr_a.g_synmax)
 
 @network_operation()
 def update_positions():
-    global imagex, imagey, image_count, survival_time
+    global imagex, imagey, image_count, survival_time, E, alpha, beta
     sr.x = bug.x + sr.x_disp * sin(bug.angle) + sr.y_disp * cos(bug.angle)
     sr.y = bug.y + - sr.x_disp * cos(bug.angle) + sr.y_disp * sin(bug.angle)
 
     sl.x = bug.x + sl.x_disp * sin(bug.angle) + sl.y_disp * cos(bug.angle)
     sl.y = bug.y - sl.x_disp * cos(bug.angle) + sl.y_disp * sin(bug.angle)
 
-    #    sr.x = bug.x + sr.x_disp*cos(bug.angle-pi/2) - sr.y_disp*sin(bug.angle-pi/2)
-    #    sr.y = bug.y + sr.x_disp*sin(bug.angle-pi/2) + sr.y_disp*cos(bug.angle-pi/2)
-    #
-    #    sl.x = bug.x + sl.x_disp*cos(bug.angle-pi/2) - sl.y_disp*sin(bug.angle-pi/2)
-    #    sl.y = bug.y + sl.x_disp*sin(bug.angle-pi/2) + sl.y_disp*cos(bug.angle-pi/2)
+#    sr.x = bug.x + sr.x_disp*cos(bug.angle-pi/2) - sr.y_disp*sin(bug.angle-pi/2)
+#    sr.y = bug.y + sr.x_disp*sin(bug.angle-pi/2) + sr.y_disp*cos(bug.angle-pi/2)
+#
+#    sl.x = bug.x + sl.x_disp*cos(bug.angle-pi/2) - sl.y_disp*sin(bug.angle-pi/2)
+#    sl.y = bug.y + sl.x_disp*sin(bug.angle-pi/2) + sl.y_disp*cos(bug.angle-pi/2)
 
     ##################### Umar Edits ########################
-    image = 'Images/7.jpg'
 #    totalTime = duration/ms
     totalTime=1000
 
     #####image = 'Images/7.jpg'image = 'Images/7.jpg'######
-    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 50:
+    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 100:
         [alpha, beta, label] = decision(image)
         img=Image.open(image)
-#        img.show()
-#        plt.figure(2)
         plt.subplot(122)
         imgplot=plt.imshow(img)
         plt.axis('off')
+        
         syn_ll_c.g_synmax = g_synmaxval*alpha
         syn_rr_c.g_synmax = g_synmaxval*alpha
         syn_ll_a.g_synmax = g_synmaxval*beta
@@ -232,6 +237,7 @@ def update_positions():
         memory.adjustValue(label,survivalAdjustment)
         print("The alpha value after backpropagation is", memory.bug_memory[label][0]) #print alpha and beta after adjustment
         print("The beta value after backpropagation is", memory.bug_memory[label][1])
+        print(memory.getValue(label))
         
         if memory.bug_memory[label][0]>0.5:
             E=0
@@ -244,7 +250,7 @@ def update_positions():
 
         if survival_time <= 0:
             # end Simulation
-            print(Clock.t)
+#            print(Clock.t)
             Network.stop()
 
         imagex = randint(-map_size + 10, map_size - 10)
@@ -281,8 +287,7 @@ def update_plot():
     bug_plot = plot(bug_x_coords, bug_y_coords, 'ko')  # Plot the bug's current position
 #    sr_plot = plot([bug.x, sr.x], [bug.y, sr.y], 'k')  # plot the antenna
 #    sl_plot = plot([bug.x, sl.x], [bug.y, sl.y], 'k')     #plot the antenna
-#    fig=pl1t.subplot(2,2,figsize=(5,10))
-    fig=plt.figure(num=1,figsize=(5,10))
+
     fig=plt.subplot(121)
     image_plot = plot(imagex, imagey,'b*')
     axis([-100, 100, -100, 100])
