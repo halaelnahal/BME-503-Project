@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
 from random import randint
 from main_ComplexEnv import *
-import bug_memory as memory
+import bug_memory_ComplexEnv as memory
 from google_vision_api import requestLabel
 from PIL import Image
 import time
@@ -222,11 +222,10 @@ print('coward', syn_ll_c.g_synmax)
 print('coward', syn_rr_c.g_synmax)
 print('aggressor', syn_ll_a.g_synmax)
 print('aggressor', syn_rr_a.g_synmax)
-apicall=0
 
 @network_operation()
 def update_positions():
-    global imagex, imagey, image_count, survival_time, E, alpha, beta, index, ABL, apicall
+    global imagex, imagey, image_count, survival_time, E, alpha, beta, index, ABL
     sr.x = bug.x + sr.x_disp * sin(bug.angle) + sr.y_disp * cos(bug.angle)
     sr.y = bug.y + - sr.x_disp * cos(bug.angle) + sr.y_disp * sin(bug.angle)
 
@@ -245,44 +244,51 @@ def update_positions():
     index = distances(ABL,bugx,bugy)
     imagex=ABL[index][4]
     imagey=ABL[index][5]
+    apiradius=1500
+    contactradius=50
+    recentindex=3
 
+    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) > apiradius:
+        if ABL[index][6]==1:
+            ABL[index][6]=0
 
-    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 1000 and ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) > 20:
+    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < apiradius and ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) > contactradius:
         ABL[index].append(1)
-        try:
-            if ABL[index][6]==0:
-                ABL[index][6]=1
-                [alpha, beta, label, adjustment] = decision(image[index])
-                apicall=1
-                img=Image.open(image[index])
-                plt.subplot(122)
-                imgplot=plt.imshow(img)
-                plt.axis('off')
-            
-                syn_ll_c.g_synmax = g_synmaxval*alpha
-                syn_rr_c.g_synmax = g_synmaxval*alpha
-                syn_ll_a.g_synmax = g_synmaxval*beta
-                syn_rr_a.g_synmax = g_synmaxval*beta
-                print("The alpha value before backpropagation is", memory.bug_memory[label][0]) #print alpha and beta before adjustment
-                print("The beta value before backpropagation is", memory.bug_memory[label][1])
-                print("The object is within 250")
-                    
-                if ABL[index][0]>0.5:
-                    E=0
-                elif ABL[index][0]<0.5:
-                    E=-80
-                sr.E = E
-                sl.E = E
-                sbr.E = E
-                sbl.E = E
-                print("The E value is", E)
-        except Error:
-            ABL[index].append(1)
+        if ABL[index][6]==0 and recentindex!=index:
+            ABL[index][6]=1
+            recentindex=index
+            [alpha, beta, label, adjustment] = decision(image[index])
+            img=Image.open(image[index])
+#                if size(imgplot)!=0:
+#                    imgplot[0].remove()
+            plt.subplot(122)
+            imgplot=plt.imshow(img)
+            plt.axis('off')
         
-    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < 20:
-        apicall=0
+            syn_ll_c.g_synmax = g_synmaxval*alpha
+            syn_rr_c.g_synmax = g_synmaxval*alpha
+            syn_ll_a.g_synmax = g_synmaxval*beta
+            syn_rr_a.g_synmax = g_synmaxval*beta
+#            print("The alpha value before backpropagation is", memory.bug_memory[label][0]) #print alpha and beta before adjustment
+#            print("The beta value before backpropagation is", memory.bug_memory[label][1])
+            print("The object is within", apiradius)
+                
+            if ABL[index][0]>0.5:
+                E=0
+            elif ABL[index][0]<0.5:
+                E=-80
+            sr.E = E
+            sl.E = E
+            sbr.E = E
+            sbl.E = E
+            print("The E value is", E)
+        
+    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < contactradius:
+        ABL[index][6]=0
         [alpha, beta, label, adjustment] = decision(image[index])
         img=Image.open(image[index])
+#        if size(imgplot)!=0:
+#            imgplot[0].remove()
         plt.subplot(122)
         imgplot=plt.imshow(img)
         plt.axis('off')
@@ -325,7 +331,6 @@ def update_positions():
 
         imagex = randint(-map_size + 10, map_size - 10)
         imagey = randint(-map_size + 10, map_size - 10)
-        print('The object is', label)
         
         ABL[index][4] = imagex
         ABL[index][5] = imagey
@@ -357,7 +362,7 @@ def update_positions():
 
 @network_operation(dt=5 * ms) #originally 15
 def update_plot():
-    global imagex, imagey, bug_plot, image_plot1, image_plot2, image_plot3, sr_plot, sl_plot, index, ABL, apicall
+    global imagex, imagey, bug_plot, image_plot1, image_plot2, image_plot3, sr_plot, sl_plot, index, ABL
     bug_plot[0].remove()
 #    image_plot[0].remove()
     image_plot1[0].remove()
