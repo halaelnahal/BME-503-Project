@@ -31,7 +31,7 @@ tau_ampa = 1.0 * ms #1.0
 g_synpk = 0.4 #0.4
 g_synmaxval = (g_synpk / (tau_ampa / ms * exp(-1)))
 
-image = ['Images/7.jpg', 'Images/1.jpg', 'Images/2.jpg']
+image = ['Images/7.jpg', 'Images/1.jpg', 'Images/2.jpg', 'Images/6.jpg']
 ABL=imgparams(image)
     
 #if memory.bug_memory[label][0]>0.5:
@@ -205,6 +205,7 @@ bug_plot = plot(bug.x, bug.y, 'ko')
 image_plot1=plot(ABL[0][4],ABL[0][5],'b*')
 image_plot2=plot(ABL[1][4],ABL[1][5],'k*')
 image_plot3=plot(ABL[2][4],ABL[2][5],'r*')
+image_plot4=plot(ABL[3][4],ABL[3][5],'yo')
 # Include Image plot somewhere
 sr_plot = plot([0], [0], 'w')  # Just leaving it blank for now
 sl_plot = plot([0], [0], 'w')
@@ -212,6 +213,9 @@ sl_plot = plot([0], [0], 'w')
 
 # Additional update rules (not covered/possible in above eqns)
 survival_time = 1000
+survivalprogress=[survival_time]
+timeprogress=[time.time()-currenttime]
+
 # Modulate Activity of Coward and Aggressor NN based on Label
 syn_ll_c.g_synmax = g_synmaxval*ABL[index][0]
 syn_rr_c.g_synmax = g_synmaxval*ABL[index][0]
@@ -223,9 +227,12 @@ print('coward', syn_rr_c.g_synmax)
 print('aggressor', syn_ll_a.g_synmax)
 print('aggressor', syn_rr_a.g_synmax)
 
+imgplot=1
+recentindex=len(image)+1
+
 @network_operation()
 def update_positions():
-    global imagex, imagey, image_count, survival_time, E, alpha, beta, index, ABL
+    global imagex, imagey, survival_time, E, alpha, beta, index, ABL, imgplot, currenttime, survivalprogress, timeprogress, recentindex
     sr.x = bug.x + sr.x_disp * sin(bug.angle) + sr.y_disp * cos(bug.angle)
     sr.y = bug.y + - sr.x_disp * cos(bug.angle) + sr.y_disp * sin(bug.angle)
 
@@ -246,7 +253,6 @@ def update_positions():
     imagey=ABL[index][5]
     apiradius=1500
     contactradius=50
-    recentindex=3
 
     if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) > apiradius:
         if ABL[index][6]==1:
@@ -258,14 +264,14 @@ def update_positions():
         sbl.E = E
 
     if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) <= apiradius and ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) >= contactradius:
-        ABL[index].append(1)
+#        ABL[index].append(1)
         if ABL[index][6]==0 and recentindex!=index:
             ABL[index][6]=1
             recentindex=index
             [alpha, beta, label, adjustment] = decision(image[index])
             img=Image.open(image[index])
-#                if size(imgplot)!=0:
-#                    imgplot[0].remove()
+            if imgplot!=1:
+                imgplot.remove()
             plt.subplot(122)
             imgplot=plt.imshow(img)
             plt.axis('off')
@@ -292,8 +298,8 @@ def update_positions():
         ABL[index][6]=0
         [alpha, beta, label, adjustment] = decision(image[index])
         img=Image.open(image[index])
-#        if size(imgplot)!=0:
-#            imgplot[0].remove()
+        if imgplot!=1:
+            imgplot.remove()
         plt.subplot(122)
         imgplot=plt.imshow(img)
         plt.axis('off')
@@ -329,10 +335,15 @@ def update_positions():
         print("The E value is", E)
         #update_decision(label) # Implement ud()
         survival_time -= delta # Get Current clock time
+        survivalprogress.append(survival_time)
+        timeprogress.append(time.time()-currenttime)
         print("The survival time is", survival_time, "and has changed by", -1*delta, "during this iteration\n")
 
-        if survival_time <= 0:
-            print('Elapsed Time: ' , time.time() - currenttime, 'seconds')
+#        if survival_time <= 0:
+#            print('Elapsed Time: ' , time.time() - currenttime, 'seconds')
+#            plt.figure(2)
+#            plot(timeprogress, survivalprogress)
+            
 
         imagex = randint(-map_size + 10, map_size - 10)
         imagey = randint(-map_size + 10, map_size - 10)
@@ -367,12 +378,13 @@ def update_positions():
 
 @network_operation(dt=5 * ms) #originally 15
 def update_plot():
-    global imagex, imagey, bug_plot, image_plot1, image_plot2, image_plot3, sr_plot, sl_plot, index, ABL
+    global imagex, imagey, bug_plot, image_plot1, image_plot2, image_plot3, image_plot4, sr_plot, sl_plot, index, ABL
     bug_plot[0].remove()
 #    image_plot[0].remove()
     image_plot1[0].remove()
     image_plot2[0].remove()
     image_plot3[0].remove()
+    image_plot4[0].remove()
 #    sr_plot[0].remove()
 #    sl_plot[0].remove()
     bug_x_coords = [bug.x, bug.x - 2 * cos(bug.angle), bug.x - 4 * cos(bug.angle)]  # ant-like body
@@ -388,6 +400,7 @@ def update_plot():
     image_plot1=plot(ABL[0][4],ABL[0][5],'b*')
     image_plot2=plot(ABL[1][4],ABL[1][5],'k*')
     image_plot3=plot(ABL[2][4],ABL[2][5],'r*')
+    image_plot4=plot(ABL[3][4],ABL[3][5],'yo')
     axis([-100, 100, -100, 100])
     draw()
     # print "."
