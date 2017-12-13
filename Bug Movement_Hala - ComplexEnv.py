@@ -251,8 +251,13 @@ def update_positions():
     if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) > apiradius:
         if ABL[index][6]==1:
             ABL[index][6]=0
+        E=-80
+        sr.E = E
+        sl.E = E
+        sbr.E = E
+        sbl.E = E
 
-    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) < apiradius and ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) > contactradius:
+    if ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) <= apiradius and ((bug.x - imagex) ** 2 + (bug.y - imagey) ** 2) >= contactradius:
         ABL[index].append(1)
         if ABL[index][6]==0 and recentindex!=index:
             ABL[index][6]=1
@@ -334,12 +339,12 @@ def update_positions():
         
         ABL[index][4] = imagex
         ABL[index][5] = imagey
-    else:
-        E=-80
-        sr.E = E
-        sl.E = E
-        sbr.E = E
-        sbl.E = E
+#    else:
+#        E=0
+#        sr.E = E
+#        sl.E = E
+#        sbr.E = E
+#        sbl.E = E
         
     if (bug.x < -map_size):
         bug.x = -map_size
