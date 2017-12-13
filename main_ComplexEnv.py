@@ -1,4 +1,4 @@
-import bug_memory as memory
+import bug_memory_ComplexEnv as memory
 import matplotlib.pyplot as plt
 from google_vision_api import requestLabel
 import numpy as np
@@ -55,22 +55,5 @@ def imgparams(image):
         ABL[i].append(imagex)
 #        ABL[i][5]=imagey
         ABL[i].append(imagey)
+        ABL[i].append(0)
     return ABL
-
-#image = 'Images/7.jpg'
-#alpha, beta, label = decision(image)
-#print('alpha: ', alpha)
-#print('beta: ', beta)
-#print('label: ', label)
-#print('####################  Starting Simulation ############################')
-#totalTime = 1000;
-#[survivalAdjustment, timeAdjustment]= error(totalTime, label)
-#print('Error: ', survivalAdjustment, timeAdjustment)
-#update_error(survivalAdjustment,label)
-#params = memory.getValue(label)
-#print('alpha: ', params[0])
-#print('beta: ', params[1])
-#print('######iteration 2#############')
-#print(memory.getValue('spider'))
-#update_error(survivalAdjustment,label)
-#print(memory.getValue('spider'))
