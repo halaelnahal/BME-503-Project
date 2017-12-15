@@ -35,10 +35,10 @@ def update_error(error,label):
     memory.adjustValue(label, error)
 
 def imgparams(image):
-#    ABL=np.zeros((len(image),6))
-    ABL=[[],[],[]]
+    ABL=[]
     for i in range(len(image)):
         imagex=0; imagey=0
+        ABL.append([])
         while(imagex<15 and imagex>-15) and (imagey<15 and imagey>-15):
             imagex=randint(-map_size + 10, map_size - 10)
             imagey=randint(-map_size + 10, map_size - 10)
